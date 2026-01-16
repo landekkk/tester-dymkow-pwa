@@ -14,10 +14,10 @@
 
 <style>
 body { font-family: Arial; padding:20px; background:#f5f5f5; }
-.day-box, .nm-box { background:white; padding:15px; margin-bottom:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+.day-box, .nm-box { background:white; padding:15px; margin-bottom:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
 input, button { width:100%; margin-bottom:15px; padding:10px; font-size:16px; }
 button { background:#007bff; color:white; border:none; border-radius:5px; }
-h2,h3{margin-top:0;}
+h2,h3 { margin-top:0; }
 </style>
 </head>
 <body>
@@ -50,16 +50,104 @@ h2,h3{margin-top:0;}
 <script>
 // --- Funkcje generatora ---
 function normalizeRange(value) { return value.replace(/[–—−]/g, "-"); }
-function randomWithinError(base) { base=parseFloat(base); const error=base*0.04; const min=base-error; const max=base+error; return (Math.random()*(max-min)+min).toFixed(2);}
-function generateNMSection(value){value=parseFloat(value);let html=`<div class="nm-box"><h3>${value} NM</h3>`;html+="<strong>Przed pracą:</strong><br>";for(let i=0;i<5;i++)html+=randomWithinError(value)+" NM<br>";html+="<br><strong>Po pracy:</strong><br>";for(let i=0;i<5;i++)html+=randomWithinError(value)+" NM<br>";html+="</div>";return html;}
-function generate(){const deviceNumber=document.getElementById("deviceNumber").value||"Brak";const snKey=document.getElementById("snKey").value||"Brak";const snTester=document.getElementById("snTester").value||"Brak";let rangeInput=document.getElementById("range").value.trim();rangeInput=normalizeRange(rangeInput);const startDate=document.getElementById("startDate").value;const days=parseInt(document.getElementById("days").value);if(!rangeInput.includes("-")){alert("Podaj zakres w formacie np. 10-200");return;}let[minVal,maxVal]=rangeInput.split("-").map(v=>parseFloat(v.trim()));if(isNaN(minVal)||isNaN(maxVal)){alert("Zakres musi być liczbami!");return;}if(maxVal<=minVal){alert("Wartość maksymalna musi być większa od minimalnej.");return;}if(!startDate){alert("Wybierz datę początkową!");return;}const testValues=[maxVal*0.2,maxVal*0.6,maxVal];let currentDate=new Date(startDate);let output="";for(let d=0;d<days;d++){let dateString=currentDate.toLocaleDateString("pl-PL");output+=`<div class="day-box"><h2>Dzień ${d+1} – ${dateString}</h2><strong>Numer urządzenia:</strong> ${deviceNumber}<br><strong>Zakres klucza:</strong> ${minVal}–${maxVal} NM<br><strong>Klucz (SN):</strong> ${snKey}<br><strong>Tester (SN):</strong> ${snTester}<br><br>`;for(let v of testValues)output+=generateNMSection(v);output+="</div>";currentDate.setDate(currentDate.getDate()+1);}document.getElementById("results").innerHTML=output;document.getElementById("pdfButton").style.display="block";}
-async function downloadPDF(){const { jsPDF }=window.jspdf;const pdf=new jsPDF({unit:"pt",format:"a4"});await pdf.html(document.getElementById("results"),{callback:function(doc){doc.save("wyniki_klucza.pdf");},margin:[20,20,20,20],html2canvas:{scale:0.55}});}
+
+function randomWithinError(base) {
+  base = parseFloat(base);
+  const error = base * 0.04;
+  const min = base - error;
+  const max = base + error;
+  return (Math.random() * (max - min) + min).toFixed(2);
+}
+
+function generateNMSection(value) {
+  value = parseFloat(value);
+  let html = `<div class="nm-box"><h3>${value} NM</h3>`;
+  html += "<strong>Przed pracą:</strong><br>";
+  for (let i = 0; i < 5; i++) html += randomWithinError(value) + " NM<br>";
+  html += "<br><strong>Po pracy:</strong><br>";
+  for (let i = 0; i < 5; i++) html += randomWithinError(value) + " NM<br>";
+  html += "</div>";
+  return html;
+}
+
+function generate() {
+  const deviceNumber = document.getElementById("deviceNumber").value || "Brak";
+  const snKey = document.getElementById("snKey").value || "Brak";
+  const snTester = document.getElementById("snTester").value || "Brak";
+
+  let rangeInput = document.getElementById("range").value.trim();
+  rangeInput = normalizeRange(rangeInput);
+
+  const startDate = document.getElementById("startDate").value;
+  const days = parseInt(document.getElementById("days").value);
+
+  if (!rangeInput.includes("-")) {
+    alert("Podaj zakres w formacie np. 10-200");
+    return;
+  }
+
+  let [minVal, maxVal] = rangeInput.split("-").map(v => parseFloat(v.trim()));
+
+  if (isNaN(minVal) || isNaN(maxVal)) {
+    alert("Zakres musi być liczbami!");
+    return;
+  }
+
+  if (maxVal <= minVal) {
+    alert("Wartość maksymalna musi być większa od minimalnej.");
+    return;
+  }
+
+  if (!startDate) {
+    alert("Wybierz datę początkową!");
+    return;
+  }
+
+  // ✅ ZMIANA: było [maxVal*0.2, maxVal*0.6, maxVal]
+  // Teraz: [MIN zakresu urządzenia, 60% MAX, MAX]
+  const mid60 = parseFloat((maxVal * 0.6).toFixed(2));
+  const testValues = [minVal, mid60, maxVal];
+
+  let currentDate = new Date(startDate);
+  let output = "";
+
+  for (let d = 0; d < days; d++) {
+    let dateString = currentDate.toLocaleDateString("pl-PL");
+    output += `<div class="day-box">
+      <h2>Dzień ${d + 1} – ${dateString}</h2>
+      <strong>Numer urządzenia:</strong> ${deviceNumber}<br>
+      <strong>Zakres klucza:</strong> ${minVal}–${maxVal} NM<br>
+      <strong>Klucz (SN):</strong> ${snKey}<br>
+      <strong>Tester (SN):</strong> ${snTester}<br><br>`;
+
+    for (let v of testValues) output += generateNMSection(v);
+
+    output += "</div>";
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  document.getElementById("results").innerHTML = output;
+  document.getElementById("pdfButton").style.display = "block";
+}
+
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "pt", format: "a4" });
+
+  await pdf.html(document.getElementById("results"), {
+    callback: function (doc) {
+      doc.save("wyniki_klucza.pdf");
+    },
+    margin: [20, 20, 20, 20],
+    html2canvas: { scale: 0.55 }
+  });
+}
 
 // --- Service Worker ---
-if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js')
-    .then(()=>console.log('Service Worker zarejestrowany'))
-    .catch(err=>console.log('Błąd SW:', err));
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('Service Worker zarejestrowany'))
+    .catch(err => console.log('Błąd SW:', err));
 }
 </script>
 
